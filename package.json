@@ -4,12 +4,13 @@
 	"description": "code appears differently in IDE than on disk",
 	"version": "0.0.1",
 	"engines": {
-		"vscode": "^1.56.0"
+		"vscode": "^1.55.0"
 	},
 	"categories": [
 		"Other"
 	],
 	"activationEvents": [
+		"onFileSystem:rosy",
         "onCommand:rosy.helloWorld"
 	],
 	"main": "./out/extension.js",
@@ -17,7 +18,8 @@
 		"commands": [
 			{
 				"command": "rosy.helloWorld",
-				"title": "Hello World"
+				"title": "Hello World!",
+				"category": "Rosy"
 			}
 		]
 	},
