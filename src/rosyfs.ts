@@ -1,13 +1,10 @@
 import { fstat } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { RosyError } from './rosy';
+import { RosyError, TargetURI, RosyURI } from './rosy';
 
-// represents a uri which rosy wraps.
-export type TargetURI = vscode.Uri;
-
-// represents a uri which rosy exposes
-export type RosyURI = vscode.Uri;
+// uniquely identifies a file (can be determined from URI)
+type FileUUID = string;
 
 // helper functions ------------------------------------------------
 function checkSchemeNonEmpty(uri: vscode.Uri) {
@@ -17,25 +14,57 @@ function checkSchemeNonEmpty(uri: vscode.Uri) {
     }
 }
 
+function checkSchemeNotRosy(uri: vscode.Uri) {
+    if (uri.scheme === "rosy")
+    {
+        // prevent recursion.
+        // this ought not technically to be illegal, but we're catching bugs like this...
+        throw new RosyError("already a Rosy URI");
+    }
+}
+
 // we use tilde as an escape character.
 const SCHEME_DELIMETER = "~-";
 
 function sanitizeURIComponent(s: string): string {
-    return s.replace("~", "~-");
+    return s.replace(/~/g, "~-");
 }
 
 function desanitizeURIComponent(s: string): string {
-    return s.replace("~-", "~");
+    return s.replace(/~-/g, "~");
+}
+
+// TODO: support more encodings than just utf16le and utf8
+function guessEncoding(buff: Buffer): BufferEncoding {
+    // this isn't perfect, but in almost any coding language the
+    // first character of a file is going to be ascii, so it ought to be pretty reliable.
+    if (buff.length % 2 === 0 && buff.length >= 3
+        // only the second byte is zero. If either of the other bytes are zero, there's probably something else going on.
+        && buff[1] === 0 && buff[0] !== 0 && buff[2] !== 0
+    )
+    {
+        return 'utf16le';
+    }
+    return 'utf8';
 }
 // -----------------------------------------------------------------
 
+type RosyFileRecord = {
+};
+
 /*
     This class handles mapping the "rosy" file to the underlying actual file and vice versa.
+    It currently can only handle utf8-encoded files.
     It is given two functions to convert from and to rosified versions, but otherwise has no understanding
     of the actual rosy file transformation that occurs.
 */
 export class RosyFS implements vscode.FileSystemProvider {
-    constructor(rosify: (a: Uint8Array) => Uint8Array, derosify: (a: Uint8Array) => Uint8Array) {
+
+    private rosify: (a: string) => string;
+    private derosify: (a: string) => string;
+    private fileRecord: Record<FileUUID, RosyFileRecord> = {};
+
+    constructor(rosify: (a: string) => string, derosify: (a: string) => string) {
         this.rosify = rosify;
         this.derosify = derosify;
     }
@@ -55,14 +84,23 @@ export class RosyFS implements vscode.FileSystemProvider {
     async readFile(uri: RosyURI): Promise<Uint8Array> {
         var targetUri = this.getTargetURI(uri);
         var fs = this.getTargetFilesystemProvider(targetUri);
-        var content = await fs.readFile(targetUri);
-        return this.rosify(content);
+        var targetBuff: Buffer = Buffer.from(await fs.readFile(targetUri));
+        var encoding: BufferEncoding = guessEncoding(targetBuff);
+        var targetContent: string = targetBuff.toString(encoding);
+        var rosyContent: string = this.rosify(targetContent);
+        var rosyBuff: Buffer = Buffer.from(rosyContent, encoding);
+        return rosyBuff;
     }
 
     writeFile(uri: RosyURI, content: Uint8Array, options: { create: boolean, overwrite: boolean }): void | Thenable<void> {
         var targetUri = this.getTargetURI(uri);
         var fs = this.getTargetFilesystemProvider(targetUri);
-        return fs.writeFile(targetUri, this.derosify(content), options);
+        var rosyBuff: Buffer = Buffer.from(content);
+        var encoding: BufferEncoding = guessEncoding(rosyBuff);
+        var rosyContent: string = rosyBuff.toString(encoding);
+        var targetContent: string = this.derosify(rosyContent);
+        var targetBuff: Buffer = Buffer.from(targetContent, encoding);
+        return fs.writeFile(targetUri, targetBuff, options);
     }
 
     rename(oldUri: RosyURI, newUri: RosyURI, options: { overwrite: boolean }): void | Thenable<void> {
@@ -174,8 +212,6 @@ export class RosyFS implements vscode.FileSystemProvider {
         });
     }
     
-    private rosify: (a: Uint8Array) => Uint8Array;
-    private derosify: (a: Uint8Array) => Uint8Array;
     private _emitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
     readonly onDidChangeFile: vscode.Event<vscode.FileChangeEvent[]> = this._emitter.event;
 
@@ -194,18 +230,13 @@ export class RosyFS implements vscode.FileSystemProvider {
     static toRosyUri(uri: TargetURI): RosyURI {
         let s = "rosy://";
         checkSchemeNonEmpty(uri);
-        if (uri.scheme === "rosy")
-        {
-            // prevent recursion.
-            // this ought not technically to be illegal, but we're catching bugs like this...
-            throw new vscode.FileSystemError("already a Rosy URI");
-        }
+        checkSchemeNotRosy(uri)
         // tilde separates wrapped scheme from wrapped authority
         s += sanitizeURIComponent(uri.scheme) + SCHEME_DELIMETER;
-        if (uri.authority) {s += sanitizeURIComponent(uri.authority);}
-        if (uri.path) {s += sanitizeURIComponent(uri.path);}
-        if (uri.query) {s += "?" + sanitizeURIComponent(uri.query);}
-        if (uri.fragment) {s += "#" + sanitizeURIComponent(uri.fragment);}
+        if (uri.authority) s += sanitizeURIComponent(uri.authority);
+        if (uri.path) s += sanitizeURIComponent(uri.path);
+        if (uri.query) s += "?" + sanitizeURIComponent(uri.query);
+        if (uri.fragment) s += "#" + sanitizeURIComponent(uri.fragment);
         return vscode.Uri.parse(s);
     }
 
@@ -258,5 +289,32 @@ export class RosyFS implements vscode.FileSystemProvider {
             checkSchemeNonEmpty(uri); // error checking
             return uri;
         }
+    }
+
+    private canonicalTargetFileID(uri: TargetURI): FileUUID {
+        checkSchemeNotRosy(uri);
+        if (uri.scheme === "" || uri.scheme === "file")
+        {
+            if (uri.authority === "" && uri.fragment === "" && uri.query === "")
+            {
+                return "F:" + path.resolve(uri.path);
+            }
+        }
+        return "U:" + uri.toString();
+    }
+
+    private getFileRecord(uri: TargetURI): RosyFileRecord {
+        var uuid: FileUUID = this.canonicalTargetFileID(uri);
+        if (this.fileRecord[uuid] === undefined)
+        {
+            // create file record
+            var record: RosyFileRecord = {
+            };
+
+            this.fileRecord[uuid] = record;
+            return record;
+        }
+        
+        return this.fileRecord[uuid];
     }
 }

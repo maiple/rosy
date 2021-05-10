@@ -1,27 +1,29 @@
+import { stringify } from 'querystring';
 import * as vscode from 'vscode';
 
 import { RosyFS } from './rosyfs';
 
-function swapCase(ord: number) {
-    if (ord >= 65 && ord <= 90)
-    {
-        return ord + 97 - 65;
+// https://stackoverflow.com/a/24471679
+function swapCase (letters: string) {
+    var newLetters = "";
+    for(var i = 0; i<letters.length; i++){
+        if(letters[i] === letters[i].toLowerCase()){
+            newLetters += letters[i].toUpperCase();
+        }else {
+            newLetters += letters[i].toLowerCase();
+        }
     }
-
-    if (ord >= 97 && ord <= 122)
-    {
-        return ord + 65 - 97;
-    }
-
-    return ord;
+    console.log(newLetters);
+    return newLetters;
 }
 
-function rosify(a: Uint8Array): Uint8Array {
-	return a.map(swapCase);
+
+function rosify(a: string): string {
+	return swapCase(a);
 }
 
-function derosify(a: Uint8Array): Uint8Array {
-	return a.map(swapCase);
+function derosify(a: string): string {
+	return swapCase(a);
 }
 
 export function activate(context: vscode.ExtensionContext) {
