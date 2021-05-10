@@ -11,14 +11,14 @@
 	],
 	"activationEvents": [
 		"onFileSystem:rosy",
-        "onCommand:rosy.helloWorld"
+        "onCommand:rosy.view"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "rosy.helloWorld",
-				"title": "Hello World!",
+				"command": "rosy.view",
+				"title": "Open This File",
 				"category": "Rosy"
 			}
 		]
