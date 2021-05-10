@@ -1,8 +1,8 @@
 {
   "name": "rosy",
 	"displayName": "rosy",
-	"description": "code appears differently in IDE than on disk",
-	"version": "0.0.1",
+	"description": "Let code appear differently in editor than on disk.",
+	"version": "0.0.2",
 	"engines": {
 		"vscode": "^1.55.0"
 	},
