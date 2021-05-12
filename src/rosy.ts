@@ -35,39 +35,8 @@ export class RosyDocument {
 }
 
 export interface Rosifier {
-    rosify: (doc: RosyDocument, RosyContext) => RosyDocument
+    rosify: (doc: RosyDocument) => RosyDocument
     derosify: (doc: RosyDocument) => RosyDocument
-}
-
-export class FindReplaceRosifier implements Rosifier {
-    ignores: RegExp | undefined;
-    from: string;
-    to: string;
-
-    constructor(from: string, to: string) {
-        this.from = from
-        this.to = to
-    }
-
-    private ranges: Range[] = []
-
-    findIgnoreRanges(doc: RosyDocument) {
-        this.ranges = []
-        if (this.ignores !== undefined)
-        {
-            const ignores = <RegExp>this.ignores;
-            const content: string = doc.getContent();
-            for (const ignore of content.matchAll(ignores)) {
-                
-            }
-        }
-    }
-
-    rosify: (doc: RosyDocument) => RosyDocument {
-
-    }
-    derosify: (doc: RosyDocument) => RosyDocument {
-    }
 }
 
 // a rosifier which comprises a sequence of rosifiers

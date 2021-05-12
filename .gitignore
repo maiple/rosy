@@ -3,3 +3,6 @@ dist
 node_modules
 .vscode-test/
 *.vsix
+src/rosy-cfg-grammar.js
+src/rosy-cfg-grammar.ts
+yarn-error.log

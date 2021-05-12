@@ -3,6 +3,8 @@ import * as vscode from 'vscode';
 
 import { RosyFS } from './rosyfs';
 
+import { rosyParseTest } from './rosy-cfg'
+
 // https://stackoverflow.com/a/24471679
 function swapCase (letters: string) {
     var newLetters = "";
@@ -33,6 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.workspace.registerFileSystemProvider('rosy', fs, { isCaseSensitive: true }));
 
 	context.subscriptions.push(vscode.commands.registerCommand('rosy.view', async () => {
+		vscode.window.showInformationMessage("test:" + rosyParseTest());
 		if (vscode.window.activeTextEditor === undefined)
 		{
 			vscode.window.showErrorMessage('No active file for viewing.');

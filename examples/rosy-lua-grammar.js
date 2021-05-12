@@ -13,6 +13,8 @@
         # X+%~ implicitly generates rules X+ -> X; X+ -> X %~ X+
         # X?   implicitly generates rules X? -> ~; X? -> X 
         # ~X -> B removes rule X -> B
+        #< this is a 
+            multiline comment >#
         # A:(...) is replaced with A and implicitly generates rule A -> ...
         # @ is the start symbol
         # % represents optional whitespace, and by default the following rules exist:
