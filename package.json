@@ -27,8 +27,10 @@
 	"scripts": {
 		"vscode:prepublish": "yarn run compile",
 		"compile": "tsc -p ./",
-		"precompile": "pegjs src/rosy-cfg-grammar.pegjs",
+		"precompile": "yarn run peg",
+		"peg": "pegjs --plugin ./node_modules/ts-pegjs/src/tspegjs -o src/rosy-cfg-grammar.ts src/rosy-cfg-grammar.pegjs",
 		"watch": "tsc -watch -p ./",
+		"prewatch": "yarn run peg",
 		"pretest": "yarn run compile && yarn run lint",
 		"lint": "eslint src --ext ts",
 		"test": "node ./out/test/runTest.js"
@@ -47,6 +49,7 @@
 		"vscode-test": "^1.5.0"
 	},
 	"dependencies": {
-		"pegjs": "^0.10.0"
+		"pegjs": "^0.10.0",
+		"ts-pegjs": "^0.3.1"
 	}
 }

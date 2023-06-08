@@ -1394,6 +1394,13 @@ to-regex-range@^5.0.1:
   resolved "https://registry.yarnpkg.com/traverse/-/traverse-0.3.9.tgz#717b8f220cc0bb7b44e40514c22b2e8bbc70d8b9"
   integrity sha1-cXuPIgzAu3tE5AUUwisui7xw2Lk=
 
+ts-pegjs@^0.3.1:
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/ts-pegjs/-/ts-pegjs-0.3.1.tgz#63dfc07bd4b358deb850cf0536391580861a660b"
+  integrity sha512-4FqLW/HdZ4KvKHUpnaf7yeZM2L/1Y9cHlQ0Z59bVNABPbMEFQnKAYs/3p0zMvvCWkY3fnjMyr/F7wKzZ//vHIw==
+  dependencies:
+    pegjs "^0.10.0"
+
 tslib@^1.8.1:
   version "1.14.1"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.14.1.tgz#cf2d38bdc34a134bcaf1091c41f6619e2f672d00"

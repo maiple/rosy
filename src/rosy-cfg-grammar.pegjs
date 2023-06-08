@@ -1,45 +1,58 @@
 /// Rosy metasyntax
 
-Expression
-  = head:Term tail:(_ ("+" / "-") _ Term)* {
-      return tail.reduce(function(result, element) {
-        if (element[1] === "+") { return result + element[3]; }
-        if (element[1] === "-") { return result - element[3]; }
-      }, head);
-    }
-
-Term
-  = head:Factor tail:(_ ("*" / "/") _ Factor)* {
-      return tail.reduce(function(result, element) {
-        if (element[1] === "*") { return result * element[3]; }
-        if (element[1] === "/") { return result / element[3]; }
-      }, head);
-    }
-
-Factor
-  = "(" _ expr:Expression _ ")" { return expr; }
-  / Integer
-
-Integer "integer"
-  = _ [0-9]+ { return parseInt(text(), 10); }
-
-_ "whitespace"
-  = [ \t\n\r]*
-
-
-G = _ (rule _)* {
-  return "hello!!"
+G = _ head:(rule (rule_end _ r:rule {return r})* rule_end? _)? {
+  if (head && head.length)
+  {
+    return [head[0], ...head[1]]
+  }
+  return []
 }
-rule = rulemod _ rulename _ ruleassign _ rulecontent rule_end
-rule_end = "\n" / _ ";" / _ ","
-rulemod = "@" / "~" / "-" / "+" / ""
-rulename = name
-ruleassign = "=" / "->" / "<-"
-rulecontent = "hello"
 
-name = namechar (namechar)*
+rule = r0:rulemod _ r1:name _ ruleassign _ c:rulecontent {
+  return {
+    "type": "rule",
+    "mod": {"~": "remove", "@": "remove", "+": "after", "-": "before"}[`${r1}`],
+    "name": r1,
+    "tokens": c
+  }
+}
+rule_end = _s "\n" / _s ";" / _s ","
+rulemod = ("@")
+ / ("~")
+ / ("+")
+ / ("-")
+ / ("")
+ruleassign = "=" / "->" / "<-"
+rulecontent = a:ruletoken b:(_s t:ruletoken {return t})* {
+  return [a, ...b]
+}
+
+ruletoken =
+    (sub:subrule decorator:ruledecorator? {return {...sub, "decorator": decorator}})
+  / (symbol:name decorator:ruledecorator? {return {"type": "symbol", "name": symbol, "decorator": decorator}})
+  / (nil:'~' {return {"type": "nil"}})
+  / (lit:literal {
+    return {"type": "literal", "value": lit}
+  })
+
+ruledecorator = '?' / '+' / '*' / '*%~' / '+%~'
+
+literal = qliteral / qqliteral
+
+qliteral  = "'" content:((("\\'" {return "'"}) / [^'])*) "'" {return content.join("")}
+qqliteral = '"' content:((('\\"' {return '"'}) / [^"])*)  '"' {return content.join("")}
+
+subrule = symbol:name _s ':' _s '(' _s content:rulecontent _s ')' {
+  return {
+    "type": "subrule",
+    "name": symbol,
+    "content": content
+  }
+}
+
+name = $ (namecharstart (namechar)*)
 namecharstart = [a-zA-Z_\%]
-namechar = [a-zA-Z0-9_\%\-\*\~\+\?]
+namechar = [a-zA-Z0-9_\%\-]
 
 _s "space"
   = _s_*
@@ -47,5 +60,5 @@ _s "space"
 _s_
   = [ \t] / "#<" (">" [^#] / [^>] ">#" )
 
-__ "whitespace"
+_ "whitespace"
   = (_s_ / [\n\r] / "#" [^\n]* "\n")*
